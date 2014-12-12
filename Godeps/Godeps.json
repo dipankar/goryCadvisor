@@ -1,0 +1,29 @@
+{
+	"ImportPath": "github.com/incredlabs/goryCadvisor",
+	"GoVersion": "go1.2.1",
+	"Deps": [
+		{
+			"ImportPath": "code.google.com/p/goprotobuf/proto",
+			"Comment": "go.r60-159",
+			"Rev": "26b4b5c8a6ec0e0bc5a8d2807c9f42f7d1bb291a"
+		},
+		{
+			"ImportPath": "github.com/bigdatadev/goryman",
+			"Rev": "a111ad53711f490443868bccb1b4348f7fce3136"
+		},
+		{
+			"ImportPath": "github.com/golang/glog",
+			"Rev": "d1c4472bf2efd3826f2b5bdcc02d8416798d678c"
+		},
+		{
+			"ImportPath": "github.com/google/cadvisor/client",
+			"Comment": "0.6.2-25-ge5bb74d",
+			"Rev": "e5bb74d81880c1e0be9abdbdfacfbe2f434f0a79"
+		},
+		{
+			"ImportPath": "github.com/google/cadvisor/info",
+			"Comment": "0.6.2-25-ge5bb74d",
+			"Rev": "e5bb74d81880c1e0be9abdbdfacfbe2f434f0a79"
+		}
+	]
+}
