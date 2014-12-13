@@ -13,6 +13,7 @@ import (
 
 var reimannAddress = flag.String("reimann_address", "localhost:5555", "specify the reimann server location")
 var cadvisorAddress = flag.String("cadvisor_address", "http://localhost:8080", "specify the cadvisor API server location")
+var sampleInterval = flag.Int("sample_interval",1000,"specify the sampling interval")
 
 func main() {
 	defer glog.Flush()
@@ -43,7 +44,11 @@ func main() {
 			if err != nil {
 				glog.Fatalf("unable to retrieve machine data: %s", err)
 			}
-			fmt.Println(returned)
+			// Start dumping data into reimann
+			// Loop into each ContainerInfo
+			// Get stats
+			// Push into reimann
+			fmt.Println(returned[0].Stats[0])
 		}
 	}
 	
