@@ -11,11 +11,11 @@ import (
 	"github.com/google/cadvisor/info"
 )
 
-var reimannAddress = flag.String("reimann_address", "localhost:5555", "specify the reimann server location")
+var riemannAddress = flag.String("riemann_address", "localhost:5555", "specify the riemann server location")
 var cadvisorAddress = flag.String("cadvisor_address", "http://localhost:8080", "specify the cadvisor API server location")
 var sampleInterval = flag.Int("sample_interval", 1000, "specify the sampling interval")
 
-func pushToReimann(r *goryman.GorymanClient, service string, metric int, tags []string) {
+func pushToRiemann(r *goryman.GorymanClient, service string, metric int, tags []string) {
 	err := r.SendEvent(&goryman.Event{
 		Service: service,
 		Metric:  metric,
@@ -30,11 +30,11 @@ func main() {
 	defer glog.Flush()
 	flag.Parse()
 
-	// Setting up the Reimann client
-	r := goryman.NewGorymanClient(*reimannAddress)
+	// Setting up the Riemann client
+	r := goryman.NewGorymanClient(*riemannAddress)
 	err := r.Connect()
 	if err != nil {
-		glog.Fatalf("unable to connect to reimann: %s", err)
+		glog.Fatalf("unable to connect to riemann: %s", err)
 	}
 	//defer r.Close()
 
@@ -55,12 +55,12 @@ func main() {
 			if err != nil {
 				glog.Fatalf("unable to retrieve machine data: %s", err)
 			}
-			// Start dumping data into reimann
+			// Start dumping data into riemann
 			// Loop into each ContainerInfo
 			// Get stats
-			// Push into reimann
+			// Push into riemann
 			for _, container := range returned {
-				pushToReimann(r, fmt.Sprintf("Load %s", container.Name), int(container.Stats[0].Cpu.Load), []string{})
+				pushToRiemann(r, fmt.Sprintf("Load %s", container.Name), int(container.Stats[0].Cpu.Load), []string{})
 			}
 		}
 	}
