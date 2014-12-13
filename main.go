@@ -15,6 +15,17 @@ var reimannAddress = flag.String("reimann_address", "localhost:5555", "specify t
 var cadvisorAddress = flag.String("cadvisor_address", "http://localhost:8080", "specify the cadvisor API server location")
 var sampleInterval = flag.Int("sample_interval", 1000, "specify the sampling interval")
 
+func pushToReimann(r *goryman.GorymanClient, service string, metric int, tags []string) {
+	err := r.SendEvent(&goryman.Event{
+		Service: service,
+		Metric:  metric,
+		Tags:    tags,
+	})
+	if err != nil {
+		glog.Fatalf("unable to write to riemann: %s", err)
+	}
+}
+
 func main() {
 	defer glog.Flush()
 	flag.Parse()
@@ -49,15 +60,7 @@ func main() {
 			// Get stats
 			// Push into reimann
 			for _, container := range returned {
-				fmt.Println(container.Stats[0])
-				err = r.SendEvent(&goryman.Event{
-					Service: "moargore",
-					Metric:  100,
-					Tags:    []string{"nonblocking"},
-				})
-				if err != nil {
-					glog.Fatalf("unable to write to riemann: %s", err)
-				}
+				pushToReimann(r, fmt.Sprintf("Load %s", container.Name), int(container.Stats[0].Cpu.Load), []string{})
 			}
 		}
 	}
