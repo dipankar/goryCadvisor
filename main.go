@@ -13,7 +13,7 @@ import (
 
 var riemannAddress = flag.String("riemann_address", "localhost:5555", "specify the riemann server location")
 var cadvisorAddress = flag.String("cadvisor_address", "http://localhost:8080", "specify the cadvisor API server location")
-var sampleInterval = flag.Int("sample_interval", 1000, "specify the sampling interval")
+var sampleInterval = flag.Duration("interval", 5*time.Second, "Interval between sampling (default: 5s)")
 
 func pushToRiemann(r *goryman.GorymanClient, service string, metric int, tags []string) {
 	err := r.SendEvent(&goryman.Event{
@@ -44,8 +44,8 @@ func main() {
 		glog.Fatalf("unable to setup cadvisor client: %s", err)
 	}
 
-	// Setting up the 1 second ticker
-	ticker := time.NewTicker(1 * time.Second).C
+	// Setting up the ticker
+	ticker := time.NewTicker(*sampleInterval).C
 	for {
 		select {
 		case <-ticker:
@@ -60,7 +60,9 @@ func main() {
 			// Get stats
 			// Push into riemann
 			for _, container := range returned {
-				pushToRiemann(r, fmt.Sprintf("Load %s", container.Name), int(container.Stats[0].Cpu.Load), []string{})
+				pushToRiemann(r, fmt.Sprintf("Cpu.Load %s", container.Name), int(container.Stats[0].Cpu.Load), []string{})
+				pushToRiemann(r, fmt.Sprintf("Cpu.Usage.Total %s", container.Name), int(container.Stats[0].Cpu.Usage.Total), []string{})
+				pushToRiemann(r, fmt.Sprintf("Memory.Usage %s", container.Name), int(container.Stats[0].Memory.Usage), []string{})
 			}
 		}
 	}
