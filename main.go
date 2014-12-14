@@ -60,7 +60,9 @@ func main() {
 			// Get stats
 			// Push into riemann
 			for _, container := range returned {
-				pushToRiemann(r, fmt.Sprintf("Load %s", container.Name), int(container.Stats[0].Cpu.Load), []string{})
+				pushToRiemann(r, fmt.Sprintf("Cpu.Load %s", container.Name), int(container.Stats[0].Cpu.Load), []string{})
+				pushToRiemann(r, fmt.Sprintf("Cpu.Usage.Total %s", container.Name), int(container.Stats[0].Cpu.Usage.Total), []string{})
+				pushToRiemann(r, fmt.Sprintf("Memory.Usage %s", container.Name), int(container.Stats[0].Memory.Usage), []string{})
 			}
 		}
 	}
