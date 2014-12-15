@@ -15,10 +15,11 @@ var riemannAddress = flag.String("riemann_address", "localhost:5555", "specify t
 var cadvisorAddress = flag.String("cadvisor_address", "http://localhost:8080", "specify the cadvisor API server location")
 var sampleInterval = flag.Duration("interval", 5*time.Second, "Interval between sampling (default: 5s)")
 
-func pushToRiemann(r *goryman.GorymanClient, service string, metric int, tags []string) {
+func pushToRiemann(r *goryman.GorymanClient, service string, metric int, ttl float32, tags []string) {
 	err := r.SendEvent(&goryman.Event{
 		Service: service,
 		Metric:  metric,
+		Ttl: 	 ttl,
 		Tags:    tags,
 	})
 	if err != nil {
@@ -60,9 +61,9 @@ func main() {
 			// Get stats
 			// Push into riemann
 			for _, container := range returned {
-				pushToRiemann(r, fmt.Sprintf("Cpu.Load %s", container.Name), int(container.Stats[0].Cpu.Load), []string{})
-				pushToRiemann(r, fmt.Sprintf("Cpu.Usage.Total %s", container.Name), int(container.Stats[0].Cpu.Usage.Total), []string{})
-				pushToRiemann(r, fmt.Sprintf("Memory.Usage %s", container.Name), int(container.Stats[0].Memory.Usage), []string{})
+				pushToRiemann(r, fmt.Sprintf("Cpu.Load %s", container.Aliases[0]), int(container.Stats[0].Cpu.Load), float32(5), container.Aliases)
+				pushToRiemann(r, fmt.Sprintf("Cpu.Usage.Total %s", container.Aliases[0]), int(container.Stats[0].Cpu.Usage.Total), float32(5), container.Aliases)
+				pushToRiemann(r, fmt.Sprintf("Memory.Usage %s", container.Aliases[0]), int(container.Stats[0].Memory.Usage), float32(5), container.Aliases)
 			}
 		}
 	}
