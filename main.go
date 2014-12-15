@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"time"
+	"strconv"
 
 	"github.com/bigdatadev/goryman"
 	"github.com/golang/glog"
@@ -59,7 +60,7 @@ func main() {
 				glog.Fatalf("unable to retrieve machine data: %s", err)
 			}
 
-			returnedMachineInfo, err := c.MachineInfo()
+			machineInfo, err := c.MachineInfo()
 			if err != nil {
 				glog.Fatal("unable to getMachineInfo: %s", err)
 			}
@@ -72,13 +73,15 @@ func main() {
 				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Cpu.Load %s", container.Aliases[0]), int(container.Stats[0].Cpu.Load), float32(10), container.Aliases)
 
 				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Cpu.Usage.Total %s", container.Aliases[0]), int(container.Stats[0].Cpu.Usage.Total), float32(10), container.Aliases)
+				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Cpu.Usage.TotalPercent %s", container.Aliases[0]), getCpuTotalPercent(&container.Spec, container.Stats, machineInfo), float32(10), container.Aliases)
+
 				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Cpu.Usage.User %s", container.Aliases[0]), int(container.Stats[0].Cpu.Usage.User), float32(10), container.Aliases)
 				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Cpu.Usage.System %s", container.Aliases[0]), int(container.Stats[0].Cpu.Usage.System), float32(10), container.Aliases)
 
 				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Memory.UsageMB %s", container.Aliases[0]), getMemoryUsage(container.Stats), float32(10), container.Aliases)
-				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Memory.UsagePercent %s", container.Aliases[0]), getMemoryUsagePercent(&container.Spec, container.Stats, returnedMachineInfo), float32(10), container.Aliases)
-				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Memory.UsageHotPercent %s", container.Aliases[0]), getHotMemoryPercent(&container.Spec, container.Stats, returnedMachineInfo), float32(10), container.Aliases)
-				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Memory.UsageColdPercent %s", container.Aliases[0]), getColdMemoryPercent(&container.Spec, container.Stats, returnedMachineInfo), float32(10), container.Aliases)
+				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Memory.UsagePercent %s", container.Aliases[0]), getMemoryUsagePercent(&container.Spec, container.Stats, machineInfo), float32(10), container.Aliases)
+				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Memory.UsageHotPercent %s", container.Aliases[0]), getHotMemoryPercent(&container.Spec, container.Stats, machineInfo), float32(10), container.Aliases)
+				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Memory.UsageColdPercent %s", container.Aliases[0]), getColdMemoryPercent(&container.Spec, container.Stats, machineInfo), float32(10), container.Aliases)
 
 				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Network.RxBytes %s", container.Aliases[0]), int(container.Stats[0].Network.RxBytes), float32(10), container.Aliases)
 				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Network.RxPackets %s", container.Aliases[0]), int(container.Stats[0].Network.RxPackets), float32(10), container.Aliases)
@@ -91,6 +94,29 @@ func main() {
 			}
 		}
 	}
+}
+
+func RoundFloat(x float64, prec int) float64 {
+	frep := strconv.FormatFloat(x, 'g', prec, 64)
+	f, _ := strconv.ParseFloat(frep, 64)
+	return f
+}
+
+func getCpuTotalPercent(spec *info.ContainerSpec, stats []*info.ContainerStats, machine *info.MachineInfo) float64 {
+
+	cpuUsage := float64(0)
+	if (spec.HasCpu && len(stats) >= 2) {
+		cur := stats[len(stats) - 1];
+		prev := stats[len(stats) - 2];
+		rawUsage := float64(cur.Cpu.Usage.Total - prev.Cpu.Usage.Total);
+		intervalInNs := float64(cur.Timestamp.Sub(prev.Timestamp).Nanoseconds());
+		// Convert to millicores and take the percentage
+		cpuUsage = RoundFloat(((rawUsage / intervalInNs) / float64(machine.NumCores)) * float64(100), 2);
+		if (cpuUsage > float64(100)) {
+			cpuUsage = float64(100)
+		}
+	}
+	return cpuUsage
 }
 
 func toMegabytes(bytes uint64) float64 {
