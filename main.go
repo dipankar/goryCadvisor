@@ -64,21 +64,21 @@ func main() {
 			// Get stats
 			// Push into riemann
 			for _, container := range returned {
-				pushToRiemann(r, hostEventRiemann, fmt.Sprintf("Cpu.Load %s", container.Aliases[0]), int(container.Stats[0].Cpu.Load), float32(10), container.Aliases)
+				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Cpu.Load %s", container.Aliases[0]), int(container.Stats[0].Cpu.Load), float32(10), container.Aliases)
 
-				pushToRiemann(r, hostEventRiemann, fmt.Sprintf("Cpu.Usage.Total %s", container.Aliases[0]), int(container.Stats[0].Cpu.Usage.Total), float32(10), container.Aliases)
-				pushToRiemann(r, hostEventRiemann, fmt.Sprintf("Cpu.Usage.User %s", container.Aliases[0]), int(container.Stats[0].Cpu.Usage.User), float32(10), container.Aliases)
-				pushToRiemann(r, hostEventRiemann, fmt.Sprintf("Cpu.Usage.System %s", container.Aliases[0]), int(container.Stats[0].Cpu.Usage.System), float32(10), container.Aliases)
+				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Cpu.Usage.Total %s", container.Aliases[0]), int(container.Stats[0].Cpu.Usage.Total), float32(10), container.Aliases)
+				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Cpu.Usage.User %s", container.Aliases[0]), int(container.Stats[0].Cpu.Usage.User), float32(10), container.Aliases)
+				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Cpu.Usage.System %s", container.Aliases[0]), int(container.Stats[0].Cpu.Usage.System), float32(10), container.Aliases)
 
-				pushToRiemann(r, hostEventRiemann, fmt.Sprintf("Memory.Usage %s", container.Aliases[0]), int(container.Stats[0].Memory.Usage), float32(10), container.Aliases)
-				pushToRiemann(r, hostEventRiemann, fmt.Sprintf("Network.RxBytes %s", container.Aliases[0]), int(container.Stats[0].Network.RxBytes), float32(10), container.Aliases)
-				pushToRiemann(r, hostEventRiemann, fmt.Sprintf("Network.RxPackets %s", container.Aliases[0]), int(container.Stats[0].Network.RxPackets), float32(10), container.Aliases)
-				pushToRiemann(r, hostEventRiemann, fmt.Sprintf("Network.RxErrors %s", container.Aliases[0]), int(container.Stats[0].Network.RxErrors), float32(10), container.Aliases)
-				pushToRiemann(r, hostEventRiemann, fmt.Sprintf("Network.RxDropped %s", container.Aliases[0]), int(container.Stats[0].Network.RxDropped), float32(10), container.Aliases)
-				pushToRiemann(r, hostEventRiemann, fmt.Sprintf("Network.TxBytes %s", container.Aliases[0]), int(container.Stats[0].Network.TxBytes), float32(10), container.Aliases)
-				pushToRiemann(r, hostEventRiemann, fmt.Sprintf("Network.TxPackets %s", container.Aliases[0]), int(container.Stats[0].Network.TxPackets), float32(10), container.Aliases)
-				pushToRiemann(r, hostEventRiemann, fmt.Sprintf("Network.TxErrors %s", container.Aliases[0]), int(container.Stats[0].Network.TxErrors), float32(10), container.Aliases)
-				pushToRiemann(r, hostEventRiemann, fmt.Sprintf("Network.TxDropped %s", container.Aliases[0]), int(container.Stats[0].Network.TxDropped), float32(10), container.Aliases)
+				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Memory.Usage %s", container.Aliases[0]), int(container.Stats[0].Memory.Usage), float32(10), container.Aliases)
+				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Network.RxBytes %s", container.Aliases[0]), int(container.Stats[0].Network.RxBytes), float32(10), container.Aliases)
+				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Network.RxPackets %s", container.Aliases[0]), int(container.Stats[0].Network.RxPackets), float32(10), container.Aliases)
+				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Network.RxErrors %s", container.Aliases[0]), int(container.Stats[0].Network.RxErrors), float32(10), container.Aliases)
+				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Network.RxDropped %s", container.Aliases[0]), int(container.Stats[0].Network.RxDropped), float32(10), container.Aliases)
+				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Network.TxBytes %s", container.Aliases[0]), int(container.Stats[0].Network.TxBytes), float32(10), container.Aliases)
+				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Network.TxPackets %s", container.Aliases[0]), int(container.Stats[0].Network.TxPackets), float32(10), container.Aliases)
+				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Network.TxErrors %s", container.Aliases[0]), int(container.Stats[0].Network.TxErrors), float32(10), container.Aliases)
+				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Network.TxDropped %s", container.Aliases[0]), int(container.Stats[0].Network.TxDropped), float32(10), container.Aliases)
 			}
 		}
 	}
