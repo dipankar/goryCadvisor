@@ -65,7 +65,11 @@ func main() {
 			// Push into riemann
 			for _, container := range returned {
 				pushToRiemann(r, fmt.Sprintf("Cpu.Load %s", container.Aliases[0]), int(container.Stats[0].Cpu.Load), float32(10), container.Aliases)
+
 				pushToRiemann(r, fmt.Sprintf("Cpu.Usage.Total %s", container.Aliases[0]), int(container.Stats[0].Cpu.Usage.Total), float32(10), container.Aliases)
+				pushToRiemann(r, fmt.Sprintf("Cpu.Usage.User %s", container.Aliases[0]), int(container.Stats[0].Cpu.Usage.User), float32(10), container.Aliases)
+				pushToRiemann(r, fmt.Sprintf("Cpu.Usage.System %s", container.Aliases[0]), int(container.Stats[0].Cpu.Usage.System), float32(10), container.Aliases)
+
 				pushToRiemann(r, fmt.Sprintf("Memory.Usage %s", container.Aliases[0]), int(container.Stats[0].Memory.Usage), float32(10), container.Aliases)
 				pushToRiemann(r, fmt.Sprintf("Network.RxBytes %s", container.Aliases[0]), int(container.Stats[0].Network.RxBytes), float32(10), container.Aliases)
 				pushToRiemann(r, fmt.Sprintf("Network.RxPackets %s", container.Aliases[0]), int(container.Stats[0].Network.RxPackets), float32(10), container.Aliases)
