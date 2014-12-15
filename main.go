@@ -16,12 +16,12 @@ var cadvisorAddress = flag.String("cadvisor_address", "http://localhost:8080", "
 var sampleInterval = flag.Duration("interval", 10*time.Second, "Interval between sampling (default: 10s)")
 var hostEventRiemann = flag.String("riemann_host_event", "", "specify host in riemann event (default '')")
 
-func pushToRiemann(r *goryman.GorymanClient, host string, service string, metric int, ttl float32, tags []string) {
+func pushToRiemann(r *goryman.GorymanClient, host string, service string, metric interface{}, ttl float32, tags []string) {
 	err := r.SendEvent(&goryman.Event{
-		Host: 	 host,
+		Host:    host,
 		Service: service,
 		Metric:  metric,
-		Ttl: 	 ttl,
+		Ttl:     ttl,
 		Tags:    tags,
 	})
 	if err != nil {
@@ -59,6 +59,11 @@ func main() {
 				glog.Fatalf("unable to retrieve machine data: %s", err)
 			}
 
+			returnedMachineInfo, err := c.MachineInfo()
+			if err != nil {
+				glog.Fatal("unable to getMachineInfo: %s", err)
+			}
+
 			// Start dumping data into riemann
 			// Loop into each ContainerInfo
 			// Get stats
@@ -70,7 +75,11 @@ func main() {
 				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Cpu.Usage.User %s", container.Aliases[0]), int(container.Stats[0].Cpu.Usage.User), float32(10), container.Aliases)
 				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Cpu.Usage.System %s", container.Aliases[0]), int(container.Stats[0].Cpu.Usage.System), float32(10), container.Aliases)
 
-				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Memory.Usage %s", container.Aliases[0]), int(container.Stats[0].Memory.Usage), float32(10), container.Aliases)
+				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Memory.UsageMB %s", container.Aliases[0]), getMemoryUsage(container.Stats), float32(10), container.Aliases)
+				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Memory.UsagePercent %s", container.Aliases[0]), getMemoryUsagePercent(&container.Spec, container.Stats, returnedMachineInfo), float32(10), container.Aliases)
+				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Memory.UsageHotPercent %s", container.Aliases[0]), getHotMemoryPercent(&container.Spec, container.Stats, returnedMachineInfo), float32(10), container.Aliases)
+				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Memory.UsageColdPercent %s", container.Aliases[0]), getColdMemoryPercent(&container.Spec, container.Stats, returnedMachineInfo), float32(10), container.Aliases)
+
 				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Network.RxBytes %s", container.Aliases[0]), int(container.Stats[0].Network.RxBytes), float32(10), container.Aliases)
 				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Network.RxPackets %s", container.Aliases[0]), int(container.Stats[0].Network.RxPackets), float32(10), container.Aliases)
 				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Network.RxErrors %s", container.Aliases[0]), int(container.Stats[0].Network.RxErrors), float32(10), container.Aliases)
@@ -82,5 +91,47 @@ func main() {
 			}
 		}
 	}
+}
 
+func toMegabytes(bytes uint64) float64 {
+	return float64(bytes) / (1 << 20)
+}
+
+func getMemoryUsage(stats []*info.ContainerStats) float64 {
+	if len(stats) == 0 {
+		return float64(0.0)
+	}
+	return toMegabytes((stats[len(stats)-1].Memory.Usage))
+}
+
+func toMemoryPercent(usage uint64, spec *info.ContainerSpec, machine *info.MachineInfo) int {
+	// Saturate limit to the machine size.
+	limit := uint64(spec.Memory.Limit)
+	if limit > uint64(machine.MemoryCapacity) {
+		limit = uint64(machine.MemoryCapacity)
+	}
+
+	return int((usage * 100) / limit)
+}
+
+func getMemoryUsagePercent(spec *info.ContainerSpec, stats []*info.ContainerStats, machine *info.MachineInfo) int {
+	if len(stats) == 0 {
+		return 0
+	}
+	return toMemoryPercent((stats[len(stats)-1].Memory.Usage), spec, machine)
+}
+
+func getHotMemoryPercent(spec *info.ContainerSpec, stats []*info.ContainerStats, machine *info.MachineInfo) int {
+	if len(stats) == 0 {
+		return 0
+	}
+	return toMemoryPercent((stats[len(stats)-1].Memory.WorkingSet), spec, machine)
+}
+
+func getColdMemoryPercent(spec *info.ContainerSpec, stats []*info.ContainerStats, machine *info.MachineInfo) int {
+	if len(stats) == 0 {
+		return 0
+	}
+	latestStats := stats[len(stats)-1].Memory
+	return toMemoryPercent((latestStats.Usage)-(latestStats.WorkingSet), spec, machine)
 }
