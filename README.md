@@ -38,4 +38,7 @@ docker run \
     -e RIEMANN_HOST_EVENT=<HostEventLabel> \
     docktor/gorycadvisor:latest
 ```
+
+`RIEMANN_HOST_EVENT` is optional.
+
 (image based on https://github.com/docktor/goryCadvisor)
