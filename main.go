@@ -17,6 +17,8 @@ var cadvisorAddress = flag.String("cadvisor_address", "http://localhost:8080", "
 var sampleInterval = flag.Duration("interval", 10*time.Second, "Interval between sampling (default: 10s)")
 var hostEventRiemann = flag.String("riemann_host_event", "", "specify host in riemann event (default '')")
 var ttlEventRiemann = flag.Int("riemann_ttl_event", 20, "specify host in riemann event in seconds (default 20)")
+var thresholdWarning = flag.Int("threshold_warning", 80, "specify threshold of warning (default 80)")
+var thresholdCritical = flag.Int("threshold_critical", 95, "specify threshold of critical (default 95)")
 
 func pushToRiemann(r *goryman.GorymanClient, host string, service string, metric interface{}, ttl float32, tags []string, state string) {
 	err := r.SendEvent(&goryman.Event{
@@ -111,10 +113,9 @@ func main() {
 
 func computeStatePercent(value float64) string {
     switch {
-        case value > 95: return "critical"
-        case value > 90: return "major"
-        case value > 50: return "minor"
-    } 
+        case value > float64(*thresholdCritical): return "critical"
+        case value > float64(*thresholdWarning): return "warning"
+    }
     return "ok"
 }
 
