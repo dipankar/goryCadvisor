@@ -17,14 +17,17 @@ var cadvisorAddress = flag.String("cadvisor_address", "http://localhost:8080", "
 var sampleInterval = flag.Duration("interval", 10*time.Second, "Interval between sampling (default: 10s)")
 var hostEventRiemann = flag.String("riemann_host_event", "", "specify host in riemann event (default '')")
 var ttlEventRiemann = flag.Int("riemann_ttl_event", 20, "specify host in riemann event in seconds (default 20)")
+var thresholdWarning = flag.Int("threshold_warning", 80, "specify threshold of warning (default 80)")
+var thresholdCritical = flag.Int("threshold_critical", 95, "specify threshold of critical (default 95)")
 
-func pushToRiemann(r *goryman.GorymanClient, host string, service string, metric interface{}, ttl float32, tags []string) {
+func pushToRiemann(r *goryman.GorymanClient, host string, service string, metric interface{}, ttl float32, tags []string, state string) {
 	err := r.SendEvent(&goryman.Event{
 		Host:    host,
 		Service: service,
 		Metric:  metric,
 		Ttl:     ttl,
 		Tags:    tags,
+		State:   state,
 	})
 	if err != nil {
 		glog.Fatalf("unable to write to riemann: %s", err)
@@ -51,6 +54,8 @@ func main() {
 
 	ttl := float32(*ttlEventRiemann)
 
+    stateEmpty := ""
+
 	// Setting up the ticker
 	ticker := time.NewTicker(*sampleInterval).C
 	for {
@@ -73,33 +78,48 @@ func main() {
 			// Get stats
 			// Push into riemann
 			for _, container := range returned {
-				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Cpu.Load %s", container.Aliases[0]), int(container.Stats[0].Cpu.Load), ttl, container.Aliases)
+				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Cpu.Load %s", container.Aliases[0]), int(container.Stats[0].Cpu.Load), ttl, container.Aliases, stateEmpty)
 
-				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Cpu.Usage.Total %s", container.Aliases[0]), int(container.Stats[0].Cpu.Usage.Total), ttl, container.Aliases)
-				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Cpu.Usage.TotalPercent %s", container.Aliases[0]), getCpuTotalPercent(&container.Spec, container.Stats, machineInfo), ttl, container.Aliases)
+				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Cpu.Usage.Total %s", container.Aliases[0]), int(container.Stats[0].Cpu.Usage.Total), ttl, container.Aliases, stateEmpty)
 
-				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Cpu.Usage.User %s", container.Aliases[0]), int(container.Stats[0].Cpu.Usage.User), ttl, container.Aliases)
-				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Cpu.Usage.System %s", container.Aliases[0]), int(container.Stats[0].Cpu.Usage.System), ttl, container.Aliases)
+                cpuUsagePercent := getCpuTotalPercent(&container.Spec, container.Stats, machineInfo)
+                stateCpu := computeStatePercent(cpuUsagePercent)
+				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Cpu.Usage.TotalPercent %s", container.Aliases[0]), cpuUsagePercent, ttl, container.Aliases, stateCpu)
 
-				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Memory.UsageMB %s", container.Aliases[0]), getMemoryUsage(container.Stats), ttl, container.Aliases)
-				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Memory.UsagePercent %s", container.Aliases[0]), getMemoryUsagePercent(&container.Spec, container.Stats, machineInfo), ttl, container.Aliases)
-				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Memory.UsageHotPercent %s", container.Aliases[0]), getHotMemoryPercent(&container.Spec, container.Stats, machineInfo), ttl, container.Aliases)
-				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Memory.UsageColdPercent %s", container.Aliases[0]), getColdMemoryPercent(&container.Spec, container.Stats, machineInfo), ttl, container.Aliases)
+				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Cpu.Usage.User %s", container.Aliases[0]), int(container.Stats[0].Cpu.Usage.User), ttl, container.Aliases, stateEmpty)
+				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Cpu.Usage.System %s", container.Aliases[0]), int(container.Stats[0].Cpu.Usage.System), ttl, container.Aliases, stateEmpty)
 
-				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Network.RxBytes %s", container.Aliases[0]), int(container.Stats[0].Network.RxBytes), ttl, container.Aliases)
-				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Network.RxPackets %s", container.Aliases[0]), int(container.Stats[0].Network.RxPackets), ttl, container.Aliases)
-				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Network.RxErrors %s", container.Aliases[0]), int(container.Stats[0].Network.RxErrors), ttl, container.Aliases)
-				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Network.RxDropped %s", container.Aliases[0]), int(container.Stats[0].Network.RxDropped), ttl, container.Aliases)
-				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Network.TxBytes %s", container.Aliases[0]), int(container.Stats[0].Network.TxBytes), ttl, container.Aliases)
-				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Network.TxPackets %s", container.Aliases[0]), int(container.Stats[0].Network.TxPackets), ttl, container.Aliases)
-				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Network.TxErrors %s", container.Aliases[0]), int(container.Stats[0].Network.TxErrors), ttl, container.Aliases)
-				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Network.TxDropped %s", container.Aliases[0]), int(container.Stats[0].Network.TxDropped), ttl, container.Aliases)
+				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Memory.UsageMB %s", container.Aliases[0]), getMemoryUsage(container.Stats), ttl, container.Aliases, stateEmpty)
+
+                memoryUsagePercent := getMemoryUsagePercent(&container.Spec, container.Stats, machineInfo)
+                stateMemory := computeStatePercent(float64(memoryUsagePercent))
+				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Memory.UsagePercent %s", container.Aliases[0]), memoryUsagePercent, ttl, container.Aliases, stateMemory)
+				
+                pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Memory.UsageHotPercent %s", container.Aliases[0]), getHotMemoryPercent(&container.Spec, container.Stats, machineInfo), ttl, container.Aliases, stateEmpty)
+				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Memory.UsageColdPercent %s", container.Aliases[0]), getColdMemoryPercent(&container.Spec, container.Stats, machineInfo), ttl, container.Aliases, stateEmpty)
+
+				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Network.RxBytes %s", container.Aliases[0]), int(container.Stats[0].Network.RxBytes), ttl, container.Aliases, stateEmpty)
+				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Network.RxPackets %s", container.Aliases[0]), int(container.Stats[0].Network.RxPackets), ttl, container.Aliases, stateEmpty)
+				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Network.RxErrors %s", container.Aliases[0]), int(container.Stats[0].Network.RxErrors), ttl, container.Aliases, stateEmpty)
+				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Network.RxDropped %s", container.Aliases[0]), int(container.Stats[0].Network.RxDropped), ttl, container.Aliases, stateEmpty)
+				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Network.TxBytes %s", container.Aliases[0]), int(container.Stats[0].Network.TxBytes), ttl, container.Aliases, stateEmpty)
+				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Network.TxPackets %s", container.Aliases[0]), int(container.Stats[0].Network.TxPackets), ttl, container.Aliases, stateEmpty)
+				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Network.TxErrors %s", container.Aliases[0]), int(container.Stats[0].Network.TxErrors), ttl, container.Aliases, stateEmpty)
+				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Network.TxDropped %s", container.Aliases[0]), int(container.Stats[0].Network.TxDropped), ttl, container.Aliases, stateEmpty)
 			}
 		}
 	}
 }
 
-func RoundFloat(x float64, prec int) float64 {
+func computeStatePercent(value float64) string {
+    switch {
+        case value > float64(*thresholdCritical): return "critical"
+        case value > float64(*thresholdWarning): return "warning"
+    }
+    return "ok"
+}
+
+func roundFloat(x float64, prec int) float64 {
 	frep := strconv.FormatFloat(x, 'g', prec, 64)
 	f, _ := strconv.ParseFloat(frep, 64)
 	return f
@@ -114,7 +134,7 @@ func getCpuTotalPercent(spec *info.ContainerSpec, stats []*info.ContainerStats, 
 		rawUsage := float64(cur.Cpu.Usage.Total - prev.Cpu.Usage.Total);
 		intervalInNs := float64(cur.Timestamp.Sub(prev.Timestamp).Nanoseconds());
 		// Convert to millicores and take the percentage
-		cpuUsage = RoundFloat(((rawUsage / intervalInNs) / float64(machine.NumCores)) * float64(100), 2);
+		cpuUsage = roundFloat(((rawUsage / intervalInNs) / float64(machine.NumCores)) * float64(100), 2);
 		if (cpuUsage > float64(100)) {
 			cpuUsage = float64(100)
 		}
