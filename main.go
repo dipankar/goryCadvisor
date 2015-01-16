@@ -107,9 +107,30 @@ func main() {
 				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Network.TxErrors %s", container.Aliases[0]), int(container.Stats[0].Network.TxErrors), ttl, container.Aliases, stateEmpty)
 				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Network.TxDropped %s", container.Aliases[0]), int(container.Stats[0].Network.TxDropped), ttl, container.Aliases, stateEmpty)
 			}
+
+			returnedFS, err := c.ContainerInfo("/",nil)
+			if err != nil {
+				glog.Fatal("unable to ContainerInfo: %s", err)
+			}
+			containerStats := returnedFS.Stats[0]
+			for _, fs := range containerStats.Filesystem  {
+				fsUsagePercent := getFsUsagePercent(fs.Usage,fs.Limit)
+				stateFS := computeStatePercent(float64(fsUsagePercent))
+				tags := []string{fs.Device}
+				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Filesystem.UsagePercent %s", fs.Device), fsUsagePercent, ttl, tags, stateFS)
+			}
+
+			
+			
+			
 		}
 	}
 }
+
+func getFsUsagePercent(usage uint64, limite uint64) float64 {
+	return roundFloat(float64(usage*100)/float64(limite), 2);
+}
+
 
 func computeStatePercent(value float64) string {
     switch {
