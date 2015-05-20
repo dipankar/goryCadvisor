@@ -9,7 +9,7 @@ To build the script use
 go get github.com/bigdatadev/goryman
 go get github.com/golang/glog
 go get github.com/google/cadvisor/client
-go get github.com/google/cadvisor/info
+go get github.com/google/cadvisor/info/v1
 go build main.go
 ```
 

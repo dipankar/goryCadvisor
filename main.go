@@ -9,7 +9,7 @@ import (
 	"github.com/bigdatadev/goryman"
 	"github.com/golang/glog"
 	"github.com/google/cadvisor/client"
-	"github.com/google/cadvisor/info"
+	info "github.com/google/cadvisor/info/v1"
 )
 
 var riemannAddress = flag.String("riemann_address", "localhost:5555", "specify the riemann server location")
@@ -62,7 +62,9 @@ func main() {
 		select {
 		case <-ticker:
 			// Make the call to get all the possible data points
-			request := info.ContainerInfoRequest{10}
+			request := info.ContainerInfoRequest{
+                        	NumStats: 10,
+			}
 			returned, err := c.AllDockerContainers(&request)
 			if err != nil {
 				glog.Fatalf("unable to retrieve machine data: %s", err)
@@ -78,7 +80,7 @@ func main() {
 			// Get stats
 			// Push into riemann
 			for _, container := range returned {
-				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Cpu.Load %s", container.Aliases[0]), int(container.Stats[0].Cpu.Load), ttl, container.Aliases, stateEmpty)
+				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Cpu.Load %s", container.Aliases[0]), int(container.Stats[0].Cpu.LoadAverage), ttl, container.Aliases, stateEmpty)
 
 				pushToRiemann(r, *hostEventRiemann, fmt.Sprintf("Cpu.Usage.Total %s", container.Aliases[0]), int(container.Stats[0].Cpu.Usage.Total), ttl, container.Aliases, stateEmpty)
 
